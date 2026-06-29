@@ -1,0 +1,21 @@
+Extend Michael's WORKING Home Assistant "Jarvis" voice assistant with home control + an action layer. You (Codex) run ON THE MAC. The Pi is reached via: ssh -o ConnectTimeout=15 -o BatchMode=yes mlwhite0907@100.91.48.99 "<cmd>". The Mac is your local machine. The Pi reaches the Mac via the SSH alias "macgrok" (i.e. on the Pi: ssh -o ConnectTimeout=15 macgrok "<cmd>" runs on the Mac).
+
+ALREADY WORKING (do NOT rebuild/restart): HA in Docker container "homeassistant" (port 8123, /config = /home/mlwhite0907/homeassistant), onboarded, admin bearer token in /home/mlwhite0907/ha_token.txt. Assist pipeline "Jarvis": stt.faster_whisper, conversation.extended_openai_conversation (-> Hermes shim http://127.0.0.1:8642/v1, model hermes-agent), tts.piper. Hermes agent runs on the Pi; invoke a one-shot turn with ~/.local/bin/hermes -p coder -z "MSG".
+
+DO IN THIS ORDER (headless; use HA REST/config-flow APIs with the admin token; back up /config/.storage/* before any storage edit):
+
+PRIORITY 1 — Yamaha RX-V4A (MusicCast): add the HA "yamaha_musiccast" integration (it discovers MusicCast devices on the LAN via SSDP; if discovery fails, add by the receiver's IP). Confirm a media_player.* entity for the receiver. Expose it to Assist (so "turn on the receiver / set volume / play" work by voice). If the receiver isn't currently reachable/powered, still install the integration and note that discovery needs the receiver on the network.
+
+PRIORITY 2 — Google Cast: add the HA "cast" integration so the Nest Hubs appear as media_player.* targets (for speaking responses through them). Confirm entities (or note if the Nest devices aren't currently discoverable).
+
+PRIORITY 3 — Action layer ("make a note" / "draft email" via Hermes):
+  a) On the MAC (local to you), create ~/jarvis-actions/note.sh and ~/jarvis-actions/draft.sh:
+     - note.sh "TEXT": creates an Apple Note (osascript: tell application "Notes" make new note with body TEXT, in a folder named "Jarvis" in the iCloud account, create the folder if missing). chmod +x.
+     - draft.sh "SUBJECT" "BODY": creates a DRAFT email in Mail.app (osascript: make new outgoing message with properties {subject, content, visible:true}; do NOT send). chmod +x. NEVER send mail.
+     Test both directly on the Mac. If macOS Automation permission (AppleEvents/TCC) blocks osascript controlling Notes or Mail when run non-interactively, capture the exact error and note precisely what Michael must approve (System Settings > Privacy & Security > Automation).
+  b) Wire Hermes to call them: append to /home/mlwhite0907/.hermes/memories/MEMORY.md (READ then APPEND only, do not overwrite) a clear instruction: 'To make an Apple Note, run: ssh -o ConnectTimeout=15 macgrok "~/jarvis-actions/note.sh \"<text>\"". To draft an email (never send), run: ssh -o ConnectTimeout=15 macgrok "~/jarvis-actions/draft.sh \"<subject>\" \"<body>\"".' Also confirm the Pi can already ssh macgrok (test: ssh mlwhite0907@100.91.48.99 'ssh -o ConnectTimeout=15 -o BatchMode=yes macgrok "echo MAC_OK"').
+  c) Verify end-to-end: POST http://localhost:8123/api/conversation/process (admin token) {"text":"make a note that the trash goes out Tuesday","agent_id":"conversation.extended_openai_conversation"} -> then confirm a note containing "trash goes out Tuesday" exists on the Mac (osascript query Notes). Report the actual outcome.
+
+GUARDRAILS: ADDITIVE ONLY. Email = DRAFT ONLY, never send. Do NOT modify/stop/restart hermes-gateway-coder, pihole, the wyoming containers, the shim, or HA core (only ADD the two integrations). Do NOT overwrite Hermes config/auth/model. Back up before any edit. If a step needs a Michael permission-grant or a powered-on device, do everything else and state EXACTLY what's needed.
+
+Write a concise report to /home/mlwhite0907/jarvis_phase5_report.txt AND print it: each priority done/partial/blocked, entity IDs, the note/draft test outcomes, and anything needing Michael (permission grants, powering on the receiver, etc.).

@@ -1,0 +1,31 @@
+Jarvis Phase 4 report - 2026-06-29
+
+Step 1 DONE - Installed extended_openai_conversation from the upstream GitHub repository into /config/custom_components/extended_openai_conversation. Restarted only homeassistant. HA logged the expected custom-integration load warning; no component load error was present.
+
+Step 2 DONE - Configured both Wyoming integrations through HA config-flow APIs.
+STT entity: stt.faster_whisper (127.0.0.1:10300)
+TTS entity: tts.piper (127.0.0.1:10200)
+
+Step 3 DONE - Configured Extended OpenAI Conversation through HA config-flow/subentry APIs.
+Conversation entity: conversation.extended_openai_conversation
+Base URL: http://127.0.0.1:8642/v1
+API key: local
+Chat model: hermes-agent
+Temperature: 0.3
+
+Step 4 DONE - Created Assist pipeline "Jarvis" and set it preferred.
+Pipeline ID: 01kw9yvedtddkkmasgy6381mhx
+Conversation: conversation.extended_openai_conversation
+STT: stt.faster_whisper, language en
+TTS: tts.piper, language en_US, voice en_US-lessac-medium
+
+Step 5 DONE - Verification succeeded.
+Shim model endpoint advertised: hermes-agent
+HA conversation API prompt: Say hello in five words
+Actual Hermes reply: Hey Michael, great to chat!
+HA response type: action_done
+Confirmed entities: conversation.extended_openai_conversation, stt.faster_whisper, tts.piper
+
+Storage safety: backed up /config/.storage/core.config_entries as /config/.storage/core.config_entries.bak.jarvis.20260629150602 before inspecting the storage fallback. No manual storage edit was needed; configuration used HA APIs.
+
+Left for Michael: Nothing. No GUI click is required.

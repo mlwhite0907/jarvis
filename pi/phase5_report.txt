@@ -1,0 +1,32 @@
+Jarvis Phase 5 report — 2026-06-29
+
+PRIORITY 1 — Yamaha RX-V4A / MusicCast: DONE
+- Full HA .storage backup created before integration changes:
+  /home/mlwhite0907/homeassistant/storage-backups/jarvis-phase5-20260629-151550
+- Receiver discovered by Yamaha API scan at 192.168.2.108; model RX-V4A, reachable, system version 1.78.
+- Added yamaha_musiccast config entry 01KW9Z869YKPV0173FAA3PXBV6; state loaded.
+- Entities: media_player.livingroom (off), media_player.room_livingroom_zone2 (off).
+- Both entities explicitly exposed to Assist via entity-registry conversation options.
+
+PRIORITY 2 — Google Cast: DONE (already installed; left intact)
+- cast config entry "Google Cast" is loaded.
+- Entities: media_player.bedroom_speaker (playing), media_player.master_bedroom_display (off), media_player.viziocastdisplay4064 (off), media_player.living_room_sub (off), media_player.home_group_official (off), media_player.kitchen_display (unavailable).
+- Cast entities were already exposed to Assist. Kitchen Display is currently unavailable; other targets are discovered.
+
+PRIORITY 3 — Action layer: PARTIAL
+- Created executable Mac scripts:
+  /Users/michaelwhite/jarvis-actions/note.sh
+  /Users/michaelwhite/jarvis-actions/draft.sh
+- Direct Mac note test: PASS. Apple Note created and verified in iCloud/Jarvis.
+- Direct Mac draft test: PASS. Visible Mail draft created and verified; no mail was sent.
+- Pi -> Mac BatchMode SSH test: PASS (MAC_OK).
+- Pi -> Mac note.sh test: PASS. Note created; no Automation/TCC error occurred.
+- Hermes MEMORY.md was read, backed up, then appended only. Backup: /home/mlwhite0907/.hermes/memories/MEMORY.md.bak.jarvis-phase5-20260629-151800.
+- Required Apple Note and draft-email commands plus NEVER SEND guidance are present in Hermes memory.
+- End-to-end HA conversation test: BLOCKED in Hermes/action selection. Two exact POSTs to /api/conversation/process returned HTTP 200 but speech was the unrelated payload {"command":"echo $OBSIDIAN_VAULT_PATH"}; neither executed note.sh. Mac verification found 0 notes containing "trash goes out Tuesday".
+- Direct Hermes one-shot also claimed it created a verification note, but Mac verification found 0 matching notes. The underlying SSH action itself works, so the failure is Hermes not invoking its terminal action, not HA, SSH, Notes, or macOS Automation permission.
+
+NEEDS MICHAEL
+- No macOS permission grant is currently needed; Notes and Mail AppleEvents both worked locally, and Notes worked through Pi -> macgrok SSH.
+- The RX-V4A is reachable and does not need to be powered on for discovery.
+- Remaining issue: Hermes must reliably execute the memorized terminal command instead of emitting/claiming an unrelated action. Existing Hermes gateway, shim, models, auth, and HA core were not modified or restarted per guardrails.

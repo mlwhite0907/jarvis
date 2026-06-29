@@ -1,0 +1,25 @@
+Make Jarvis's ACTIONS and DEVICE CONTROL reliable by handling them DETERMINISTICALLY in Home Assistant instead of via the free Hermes LLM (which is unreliable at executing actions). You (Codex) run on the Mac. Pi: ssh -o ConnectTimeout=15 -o BatchMode=yes mlwhite0907@100.91.48.99 "<cmd>". HA container "homeassistant", /config = /home/mlwhite0907/homeassistant, admin token in /home/mlwhite0907/ha_token.txt.
+
+CURRENT STATE (working, do not break): "Jarvis" Assist pipeline (stt.faster_whisper, conversation.extended_openai_conversation -> Hermes shim :8642, tts.piper). Yamaha media_player.livingroom + Cast speakers exist. Mac scripts WORK and are reachable from the Pi: ssh -o ConnectTimeout=15 -o BatchMode=yes macgrok "~/jarvis-actions/note.sh \"TEXT\"" creates an Apple Note; ssh ... macgrok "~/jarvis-actions/draft.sh \"SUBJECT\" \"BODY\"" creates a Mail DRAFT (never sends).
+
+KEY CONSTRAINT: HA runs in a Docker container, so HA's shell_command CANNOT ssh macgrok directly (no keys / not the host). SOLUTION: create a tiny HOST-side action-runner on the Pi that HA curls.
+
+DO (headless; back up /config and configuration.yaml before edits):
+1) On the Pi HOST, create a small HTTP action-runner (Python stdlib http.server) as a systemd USER service "jarvis-actions" listening on 0.0.0.0:8765 with POST routes:
+   /note  body {"text":"..."}  -> runs: ssh -o ConnectTimeout=15 -o BatchMode=yes macgrok "~/jarvis-actions/note.sh \"<text>\""  (shell-escape safely)
+   /draft body {"subject":"...","body":"..."} -> runs draft.sh similarly (NEVER sends).
+   Return JSON {"ok":true,"detail":"..."}. Enable + start it; verify with curl from the Pi host AND from inside the HA container (docker exec homeassistant curl ... http://<pi-host-lan-ip>:8765/note) — use a host IP the container can reach (host LAN IP or the docker host gateway; HA uses --network=host so localhost should work — verify).
+2) In HA configuration.yaml add rest_command entries jarvis_note and jarvis_draft that POST to the action-runner; reload HA config (or restart container).
+3) Add custom conversation intents (intent_script + custom sentences) so these phrases map to the rest_commands:
+   - "make a note that {text}" / "note that {text}" / "take a note {text}" -> jarvis_note(text)
+   - "remind me to {text}" / "remind me that {text}" -> jarvis_note("Reminder: "+text)  (Apple Note for now)
+   - "draft an email about {text}" / "draft an email to {who} about {text}" -> jarvis_draft
+   Each intent_script should speak a short confirmation like "Done, I added that note."
+4) Enable "prefer handling commands locally" on the Jarvis pipeline so HA resolves device control (e.g. "turn on the receiver" -> media_player.livingroom) AND these custom intents deterministically, and only open-ended questions fall through to Hermes. Make sure the Yamaha + light + media_player entities are exposed to Assist.
+5) VERIFY end-to-end via POST http://localhost:8123/api/conversation/process (admin token):
+   a) {"text":"make a note that the trash goes out Tuesday"} -> then query the Mac (ssh macgrok osascript) and confirm a Note containing "trash goes out Tuesday" now exists.
+   b) {"text":"turn on the receiver"} -> confirm it targets media_player.livingroom (turn_on called) — note if the receiver must be powered to confirm.
+   c) {"text":"what's the capital of France"} -> confirm this still falls through to Hermes (open chat still works).
+   Report the ACTUAL outcomes of a/b/c.
+GUARDRAILS: additive only; email DRAFT only never send; do NOT modify/restart hermes-gateway-coder, pihole, the shim, or wyoming; back up configuration.yaml + /config/.storage before edits. If anything needs Michael, state it exactly.
+Write report to /home/mlwhite0907/jarvis_phase6_report.txt and print it.

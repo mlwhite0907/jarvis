@@ -1,0 +1,23 @@
+Jarvis Phase 3 backend build report — 2026-06-29
+
+BUILD PIECE 1 — Local Wyoming voice engines
+- wyoming-whisper: Up; restart=unless-stopped; listening on 0.0.0.0:10300 and [::]:10300; model tiny-int8; language en; log reports Ready.
+- wyoming-piper: Up; restart=unless-stopped; listening on 0.0.0.0:10200 and [::]:10200; voice en_US-lessac-medium; voice files downloaded; log reports Ready.
+
+BUILD PIECE 2 — hermes-openai-shim
+- Created /home/mlwhite0907/hermes-openai-shim/shim.py using Python stdlib ThreadingHTTPServer.
+- Created user unit hermes-openai-shim.service; enabled and active; Restart=always; zero restarts at verification.
+- Listening on 0.0.0.0:8642.
+- Implements GET /v1/models, POST /v1/chat/completions, last-user-message routing to Hermes, 120-second timeout, OpenAI-shaped responses/errors, and single-chunk SSE streaming followed by [DONE].
+
+MODELS CURL OUTPUT
+{"object": "list", "data": [{"id": "hermes-agent", "object": "model", "created": 0, "owned_by": "local"}]}
+
+SHIM OK CURL OUTPUT
+{"id": "chatcmpl-b1a0e9a90e9e4958ba25aa0249045cf9", "object": "chat.completion", "created": 1782743071, "model": "hermes-agent", "choices": [{"index": 0, "message": {"role": "assistant", "content": "SHIM OK"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}}
+
+ADDITIONAL STREAM VERIFICATION
+Received one valid chat.completion.chunk containing STREAM OK, followed by data: [DONE].
+
+FAILURES
+None. Initial concurrent image-pull retry encountered a harmless container-name conflict after the first pull completed and created wyoming-whisper; the existing requested container was reused and verified healthy. No protected existing container, service, or Hermes configuration was modified, stopped, or restarted.
