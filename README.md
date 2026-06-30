@@ -1,3 +1,5 @@
+
+> ⚡ **See [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md)** for the up-to-date system (2026-06-30) — the brain is now fast gpt-4o-mini (not the Hermes agent), plus life-context, voice-learning, Gmail email, and the Open WebUI app.
 # Jarvis — home voice assistant (Hermes brain + Home Assistant)
 
 A self-hosted, voice-controlled personal assistant for Michael's home. You talk to it

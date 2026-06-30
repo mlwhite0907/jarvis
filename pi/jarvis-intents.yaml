@@ -1,0 +1,26 @@
+language: "en"
+intents:
+  JarvisNote:
+    data:
+      - sentences:
+          - "make a note that {text}"
+          - "note that {text}"
+          - "take a note {text}"
+  JarvisReminder:
+    data:
+      - sentences:
+          - "remind me to {text}"
+          - "remind me that {text}"
+  JarvisDraft:
+    data:
+      - sentences:
+          - "draft an email about {text}"
+  JarvisDraftTo:
+    data:
+      - sentences:
+          - "draft an email to {who} about {text}"
+lists:
+  text:
+    wildcard: true
+  who:
+    wildcard: true
