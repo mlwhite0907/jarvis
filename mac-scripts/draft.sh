@@ -1,19 +1,7 @@
 #!/bin/zsh
+# Jarvis "draft an email" action → creates a GMAIL draft via IMAP (no Mail.app, no TCC).
+# Called by the Pi action_runner as: draft.sh "SUBJECT" "BODY"
 set -euo pipefail
-
-if (( $# != 2 )); then
-  print -u2 'usage: draft.sh "SUBJECT" "BODY"'
-  exit 64
-fi
-
-/usr/bin/osascript - "$1" "$2" <<'APPLESCRIPT'
-on run argv
-  set messageSubject to item 1 of argv
-  set messageBody to item 2 of argv
-  tell application "Mail"
-    set msg to make new outgoing message with properties {subject:messageSubject, content:messageBody, visible:false}
-    save msg
-  end tell
-  return "draft saved to Mail Drafts"
-end run
-APPLESCRIPT
+SUBJECT="${1:-(no subject)}"
+BODY="${2:-}"
+exec "$HOME/.life-assistant/draft-email.sh" --to "YOUR_EMAIL@gmail.com" --subject "$SUBJECT" --body "$BODY"

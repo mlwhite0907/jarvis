@@ -1,53 +1,40 @@
 #!/usr/bin/env zsh
-# One-time setup: store your Gmail App Password in the macOS keychain.
+# One-time setup: store your Gmail App Password so Jarvis can create Gmail drafts.
+# Writes BOTH a chmod-600 file (used headlessly by ssh + launchd) AND the macOS keychain.
 # Usage: ./gmail-setup.sh <16-char-app-password>   (spaces are ignored)
-#
-# After running this once, draft-email.sh and draft-email.py will work
-# without any further credential prompts.
-
 set -euo pipefail
 
 GMAIL_USER="YOUR_EMAIL@gmail.com"
 KEYCHAIN_SERVICE="jarvis-gmail"
+PWFILE="$HOME/.life-assistant/.gmail_app_pw"
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <app-password>"
-  echo ""
-  echo "Get an App Password at: https://myaccount.google.com/apppasswords"
-  echo "  → Select app: Mail, device type: Mac → Generate"
-  echo "  → Copy the 16-character password (remove spaces)"
+  echo "Get one at: https://myaccount.google.com/apppasswords  (app: Mail)"
   exit 1
 fi
 
-# Strip spaces from the password (Google shows it with spaces for readability)
-APP_PW="${1// /}"
-
+APP_PW="${1// /}"   # Google shows it with spaces; strip them
 if [[ ${#APP_PW} -ne 16 ]]; then
-  echo "WARNING: App Password should be 16 characters; got ${#APP_PW}. Continuing anyway."
+  echo "WARNING: App Password should be 16 chars; got ${#APP_PW}. Continuing."
 fi
 
-# Store in keychain (updates if already exists)
+# 1) chmod-600 file — this is what works from ssh/launchd (keychain does NOT)
+printf '%s' "$APP_PW" > "$PWFILE"
+chmod 600 "$PWFILE"
+
+# 2) keychain too (for interactive use)
 security delete-generic-password -a "$GMAIL_USER" -s "$KEYCHAIN_SERVICE" 2>/dev/null || true
 security add-generic-password -a "$GMAIL_USER" -s "$KEYCHAIN_SERVICE" -w "$APP_PW"
 
-echo "Stored Gmail App Password in keychain under '$KEYCHAIN_SERVICE'."
-echo "Testing connection..."
-
-python3 - <<PYEOF
-import imaplib, subprocess, sys
-
-pw = subprocess.run(
-    ["security","find-generic-password","-a","YOUR_EMAIL@gmail.com","-s","jarvis-gmail","-w"],
-    capture_output=True, text=True
-).stdout.strip()
-
+echo "Stored App Password in $PWFILE (chmod 600) and macOS keychain."
+echo "Testing IMAP connection..."
+GMAIL_APP_PASSWORD="$APP_PW" python3 - <<'PYEOF'
+import imaplib, os
+pw = os.environ["GMAIL_APP_PASSWORD"]
 try:
-    imap = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-    imap.login("YOUR_EMAIL@gmail.com", pw)
-    imap.logout()
+    m = imaplib.IMAP4_SSL("imap.gmail.com", 993); m.login("YOUR_EMAIL@gmail.com", pw); m.logout()
     print("SUCCESS: Gmail IMAP login worked.")
 except Exception as e:
-    print(f"FAILED: {e}", file=sys.stderr)
-    print("Check the App Password and that IMAP is enabled in Gmail settings.", file=sys.stderr)
-    sys.exit(1)
+    print(f"FAILED: {e}"); raise SystemExit(1)
 PYEOF

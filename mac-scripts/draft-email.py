@@ -34,17 +34,36 @@ IMAP_PORT = 993
 
 
 def get_app_password():
-    """Read the App Password from macOS keychain."""
+    """Read the Gmail App Password. Tries, in order:
+    1. env var GMAIL_APP_PASSWORD
+    2. a chmod-600 file ~/.life-assistant/.gmail_app_pw  (works headlessly: ssh + launchd)
+    3. the macOS login keychain  (interactive sessions only)
+    Keychain is last because it is NOT readable from non-interactive ssh/launchd contexts.
+    """
+    env_pw = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+    if env_pw:
+        return env_pw
+
+    pw_file = os.path.expanduser("~/.life-assistant/.gmail_app_pw")
+    try:
+        with open(pw_file) as fh:
+            fpw = fh.read().strip()
+        if fpw:
+            return fpw
+    except OSError:
+        pass
+
     r = subprocess.run(
         ["security", "find-generic-password", "-a", GMAIL_USER, "-s", KEYCHAIN_SERVICE, "-w"],
         capture_output=True, text=True
     )
-    if r.returncode != 0:
-        print("ERROR: Gmail App Password not found in keychain.", file=sys.stderr)
-        print("Run:  ~/.life-assistant/gmail-setup.sh <your-app-password>", file=sys.stderr)
-        print("See:  https://myaccount.google.com/apppasswords", file=sys.stderr)
-        sys.exit(1)
-    return r.stdout.strip()
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip()
+
+    print("ERROR: Gmail App Password not found (env, %s, or keychain)." % pw_file, file=sys.stderr)
+    print("Run:  ~/.life-assistant/gmail-setup.sh <your-app-password>", file=sys.stderr)
+    print("See:  https://myaccount.google.com/apppasswords", file=sys.stderr)
+    sys.exit(1)
 
 
 def create_draft(to: str, subject: str, body: str, reply_to_id=None) -> str:
